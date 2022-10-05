@@ -40,67 +40,64 @@ void box(int x, int y, int w, int h, char c)
 }
 
 float t_ray[2];
-void ray(int a)
+int t_side;
+float ray(int a)
 {
     if(a < 0) a += 360;
     if(a > 359) a -= 360;
 
-    float rayDir[2];
-    rayDir[0] = COS(a);
-    rayDir[1] = SIN(a);
+    float rayDirX = COS(a);
+    float rayDirY = SIN(a);
 
-    float dX = sqrt( 1 + (rayDir[1]*rayDir[1]) / (rayDir[0]*rayDir[0]) );
-    float dY = sqrt( 1 + (rayDir[0]*rayDir[0]) / (rayDir[1]*rayDir[1]) );
+    float dX = sqrt( 1 + (rayDirY*rayDirY) / (rayDirX*rayDirX) );
+    float dY = sqrt( 1 + (rayDirX*rayDirX) / (rayDirY*rayDirY) );
 
     int mapX = p[0];
     int mapY = p[1];
+    int stepX, stepY;
 
-    int vStep[2];
-
-    if(rayDir[0] < 0)
+    if(rayDirX < 0)
     {
-        vStep[0] = -1;
+        stepX = -1;
         t_ray[0] = (p[0] - mapX) * dX;
     }
     else
     {
-        vStep[0] = 1;
+        stepX = 1;
         t_ray[0] = (mapX + 1.0f - p[0]) * dX;
     }
-    if(rayDir[1] < 0)
+    if(rayDirY < 0)
     {
-        vStep[1] = -1;
+        stepY = -1;
         t_ray[1] = (p[1] - mapY) * dY;
     }
     else
     {
-        vStep[1] = 1;
+        stepY = 1;
         t_ray[1] = (mapY + 1.0f - p[1]) * dY;
     }
 
-    float fDistance = 0.0f;
     while(1)
     {
         if(t_ray[0] < t_ray[1])
         {
-            mapX += vStep[0];
-            fDistance = t_ray[0];
+            mapX += stepX;
+            t_side = 0;
             t_ray[0] += dX;
         }
         else
         {
-            mapY += vStep[1];
-            fDistance = t_ray[1];
+            mapY += stepY;
+            t_side = 1;
             t_ray[1] += dY;
         }
         if(mapX < 0 || mapY < 0 || mapX >= GS || mapY >= GS) break;
         if(walls[GS-1-mapY][mapX]) break;
     }
 
-    float vInteraction[2];
-    vInteraction[0] = p[0] + rayDir[0] * fDistance;
-    vInteraction[1] = p[1] + rayDir[1] * fDistance;
-    line(p[0]*CW, p[1]*CH, vInteraction[0]*CW, vInteraction[1]*CH, 3);
+    float delta = t_side ? (t_ray[1]-dY) : (t_ray[0]-dX);
+    t_ray[0] = p[0] + rayDirX * delta;
+    t_ray[1] = p[1] + rayDirY * delta;
 }
 
 void draw2D()
@@ -119,6 +116,7 @@ void draw2D()
     for(int i = 0; i < fov; i++)
     {
         ray(r+i-(fov>>1));
+        line(p[0]*CW, p[1]*CH, t_ray[0]*CW, t_ray[1]*CH, 2);
     }
     pixel(p[0]*CW, p[1]*CH, 4);
 }
