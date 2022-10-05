@@ -28,7 +28,7 @@ int walls[GS][GS] = {
 #define CW (WIDTH/GS)
 #define CH (HEIGHT/GS)
 
-void box(int x, int y, int w, int h, char c)
+void box(int x, int y, int w, int h, u_int32_t c)
 {
     for(int i = x; i < x+w; i++)
     {
@@ -40,6 +40,7 @@ void box(int x, int y, int w, int h, char c)
 }
 
 float t_ray[2];
+float t_delta;
 int t_side;
 float ray(int a)
 {
@@ -95,9 +96,9 @@ float ray(int a)
         if(walls[GS-1-mapY][mapX]) break;
     }
 
-    float delta = t_side ? (t_ray[1]-dY) : (t_ray[0]-dX);
-    t_ray[0] = p[0] + rayDirX * delta;
-    t_ray[1] = p[1] + rayDirY * delta;
+    t_delta = t_side ? (t_ray[1]-dY) : (t_ray[0]-dX);
+    t_ray[0] = p[0] + rayDirX * t_delta;
+    t_ray[1] = p[1] + rayDirY * t_delta;
 }
 
 void draw2D()
@@ -106,9 +107,9 @@ void draw2D()
     {
         for(int y = 0; y < GS; y++)
         {
-            box(x*CW, y*CH, CW, CH, walls[GS-1-y][x]);
-            box(x*CW, y*CH, 1, CH, 8);
-            box(x*CW, y*CH, CH, 1, 8);
+            box(x*CW, y*CH, CW, CH, walls[GS-1-y][x] ? 0xFFFFFFFF : 0);
+            box(x*CW, y*CH, 1, CH, 0xAAAA00);
+            box(x*CW, y*CH, CH, 1, 0xAAAA00);
         }
     }
 
@@ -116,9 +117,21 @@ void draw2D()
     for(int i = 0; i < fov; i++)
     {
         ray(r+i-(fov>>1));
-        line(p[0]*CW, p[1]*CH, t_ray[0]*CW, t_ray[1]*CH, 2);
+        line(p[0]*CW, p[1]*CH, t_ray[0]*CW, t_ray[1]*CH, 0xFF0000);
     }
-    pixel(p[0]*CW, p[1]*CH, 4);
+}
+
+void draw3D()
+{
+    int fov = 60;
+    int c;
+    for(int i = 0; i < fov; i++)
+    {
+        ray(r+i-(fov>>1));
+        if(t_delta < 1) c = 255<<16;
+        else c = (int)(255 / t_delta) << 16;
+        box(WIDTH-i*(WIDTH/(float)fov), HH-((1/t_delta)*HH), (WIDTH/(float)fov)+1, (1/t_delta*2)*HH, clamp(c + (0x4F0000*t_side),0,255<<16));
+    }
 }
 
 int loop()
@@ -129,7 +142,8 @@ int loop()
     if(getKey(GLFW_KEY_D)) { r-=5; if(r < 0) r += 360; }
     if(getKey(GLFW_KEY_A)) { r+=5; if(r > 359) r -= 360; }
 
-    draw2D();
+    if(getKey(GLFW_KEY_TAB)) draw2D();
+    else draw3D();
     return 0;
 }
 
