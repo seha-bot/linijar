@@ -40,23 +40,43 @@ void box(int x, int y, int w, int h, char c)
 }
 
 float t_ray[2];
+float t_ray2[2];
 void ray(int a)
 {
     if(a < 0) a += 360;
     if(a > 359) a -= 360;
     float end[2];
-    end[0] = p[0] + COS(a) * 1000.0;
-    end[1] = p[1] + SIN(a) * 1000.0;
-    t_ray[0] = p[0] + 1;
-    t_ray[1] = p[1] + sqrt( 1 + (end[1]*end[1])/(end[0]*end[0]) );
+    end[0] = COS(a) == 0 ? 1 : COS(a);
+    end[1] = SIN(a) == 0 ? 1 : SIN(a);
+    float dX = sqrt( 1 + (end[1]*end[1])/(end[0]*end[0]) );
+    float dY = sqrt( 1 + (end[0]*end[0])/(end[1]*end[1]) );
+
+    
+    t_ray[0] = clamp(p[0] + COS(a) * dY, -1000, 1000);
+    t_ray[1] = clamp(p[1] + SIN(a) * dY, -1000, 1000);
+
+    t_ray2[0] = clamp(p[0] + COS(a) * dX, -1000, 1000);
+    t_ray2[1] = clamp(p[1] + SIN(a) * dX, -1000, 1000);
+
+    // t_ray[0] -= (p[0] - (int)p[0]);
+    // t_ray[1] -= (p[1] - (int)p[1]);
 }
 
 void ray2(int a)
 {
     if(a < 0) a += 360;
     if(a > 359) a -= 360;
-    t_ray[0] = p[0] + COS(a) * 300.0;
-    t_ray[1] = p[1] + SIN(a) * 300.0;
+    t_ray[0] = p[0];
+    t_ray[1] = p[1];
+    int x, y;
+    for(int i = 0; i < 1000; i++)
+    {
+        t_ray[0] += COS(a) * 0.01;
+        t_ray[1] += SIN(a) * 0.01;
+        x = t_ray[0], y = t_ray[1];
+        if(x < 0 || y < 0 || x >= GS || y >= GS) break;
+        if(walls[GS-1-y][x]) break;
+    }
 }
 
 void draw2D()
@@ -74,10 +94,11 @@ void draw2D()
     int fov = 1;
     for(int i = 0; i < fov; i++)
     {
+        ray2(r+i-(fov>>1));
+        // line(p[0]*CW, p[1]*CH, t_ray[0]*CW, t_ray[1]*CH, 9);
         ray(r+i-(fov>>1));
         line(p[0]*CW, p[1]*CH, t_ray[0]*CW, t_ray[1]*CH, 3);
-        ray2(r+i-(fov>>1));
-        line(p[0]*CW, p[1]*CH, t_ray[0]*CW, t_ray[1]*CH, 9);
+        line(p[0]*CW+1, p[1]*CH+1, t_ray2[0]*CW+1, t_ray2[1]*CH+1, 4);
     }
     pixel(p[0]*CW, p[1]*CH, 4);
 }
@@ -87,10 +108,8 @@ int loop()
     float speed = 0.05;
     if(getKey(GLFW_KEY_W)) { p[0] += COS(r)*speed; p[1] += SIN(r)*speed; }
     if(getKey(GLFW_KEY_S)) { p[0] -= COS(r)*speed; p[1] -= SIN(r)*speed; }
-    if(getKey(GLFW_KEY_D)) { p[0] += SIN(r)*speed; p[1] -= COS(r)*speed; }
-    if(getKey(GLFW_KEY_A)) { p[0] -= SIN(r)*speed; p[1] += COS(r)*speed; }
-    if(getKey(GLFW_KEY_RIGHT)) { r-=5; if(r < 0) r += 360; }
-    if(getKey(GLFW_KEY_LEFT)) { r+=5; if(r > 359) r -= 360; }
+    if(getKey(GLFW_KEY_D)) { r-=5; if(r < 0) r += 360; }
+    if(getKey(GLFW_KEY_A)) { r+=5; if(r > 359) r -= 360; }
 
     draw2D();
     return 0;
