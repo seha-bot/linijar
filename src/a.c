@@ -7,14 +7,13 @@
 #define HH 125
 
 float p[2];
-int r = 270;
+int r = 90;
 float trig[2][360];
 #define SIN(a) trig[0][a]
 #define COS(a) trig[1][a]
 
-#define GW 10
-#define GH 10
-int walls[GW][GH] = {
+#define GS 10
+int walls[GS][GS] = {
     1,1,1,1,1,1,1,1,1,1,
     1,0,0,0,0,0,0,0,0,1,
     1,0,0,0,0,0,0,0,0,1,
@@ -26,6 +25,8 @@ int walls[GW][GH] = {
     1,0,0,0,0,0,0,0,0,1,
     1,1,1,1,1,1,1,1,1,1,
 };
+#define CW (WIDTH/GS)
+#define CH (HEIGHT/GS)
 
 void box(int x, int y, int w, int h, char c)
 {
@@ -39,87 +40,58 @@ void box(int x, int y, int w, int h, char c)
 }
 
 float t_ray[2];
-char col = 0;
-void ray(int a, int c)
+void ray(int a)
 {
-    if(!c)
-    {
-        // t_ray[0] = p[0]+HEIGHT;
-        // t_ray[1] = p[1]+HEIGHT;
-        return;
-    }
     if(a < 0) a += 360;
     if(a > 359) a -= 360;
-    if(a < 180) col = 5;
-    else col = 8;
-    t_ray[0] += COS(a);
-    t_ray[1] += SIN(a);
-    int x = GW / (WIDTH / t_ray[0]);
-    int y = GH / (HEIGHT / t_ray[1]);
-    if(x < 0 || y < 0 || x >= GW || y >= GH) return;
-    if(!walls[GH-1-y][x]) ray(a, c - 1);
+    float end[2];
+    end[0] = p[0] + COS(a) * 1000.0;
+    end[1] = p[1] + SIN(a) * 1000.0;
+    t_ray[0] = p[0] + 1;
+    t_ray[1] = p[1] + sqrt( 1 + (end[1]*end[1])/(end[0]*end[0]) );
+}
+
+void ray2(int a)
+{
+    if(a < 0) a += 360;
+    if(a > 359) a -= 360;
+    t_ray[0] = p[0] + COS(a) * 300.0;
+    t_ray[1] = p[1] + SIN(a) * 300.0;
 }
 
 void draw2D()
 {
-    int xp = GW / (WIDTH / p[0]);
-    int yp = GH / (HEIGHT / p[1]);
-    for(int x = 0; x < GW; x++)
+    for(int x = 0; x < GS; x++)
     {
-        for(int y = 0; y < GH; y++)
+        for(int y = 0; y < GS; y++)
         {
-            box(x*(WIDTH/GW), y*(HEIGHT/GH), (WIDTH/GW), (HEIGHT/GH), (x == xp && y == yp) ? 2 : 0);
+            box(x*CW, y*CH, CW, CH, walls[GS-1-y][x]);
+            box(x*CW, y*CH, 1, CH, 8);
+            box(x*CW, y*CH, CH, 1, 8);
         }
     }
 
-    for(int x = 0; x < GW; x++)
-    {
-        for(int y = 0; y < GH; y++)
-        {
-            if(x == xp && y == yp) continue;
-            box(x*(WIDTH/GW), y*(HEIGHT/GH), (WIDTH/GW), (HEIGHT/GH), walls[GH-1-y][x]);
-        }
-    }
-
-    int fov = 60;
+    int fov = 1;
     for(int i = 0; i < fov; i++)
     {
-        t_ray[0] = p[0];
-        t_ray[1] = p[1];
-        ray(r+i-(fov>>1), 300);
-        line(p[0], p[1], t_ray[0], t_ray[1], col);
+        ray(r+i-(fov>>1));
+        line(p[0]*CW, p[1]*CH, t_ray[0]*CW, t_ray[1]*CH, 3);
+        ray2(r+i-(fov>>1));
+        line(p[0]*CW, p[1]*CH, t_ray[0]*CW, t_ray[1]*CH, 9);
     }
-    pixel(p[0], p[1], 2);
-}
-
-void draw3D()
-{
-    int fov = 60;
-    for(int i = 0; i < fov; i++)
-    {
-        t_ray[0] = p[0];
-        t_ray[1] = p[1];
-        ray(r+i-(fov>>1), 300);
-        t_ray[0] -= p[0];
-        t_ray[1] -= p[1];
-        float ray = 1/Q_rsqrt(t_ray[0]*t_ray[0]+t_ray[1]*t_ray[1]);
-        // ray = min(ray*3, HW);
-        // ray = ray/2;
-        box(WIDTH-i*(WIDTH/fov), ray, (WIDTH/fov), HEIGHT-ray*2, col);
-    }
+    pixel(p[0]*CW, p[1]*CH, 4);
 }
 
 int loop()
 {
-    if(getKey(GLFW_KEY_W)) { p[0] += COS(r); p[1] += SIN(r); }
-    if(getKey(GLFW_KEY_S)) { p[0] -= COS(r); p[1] -= SIN(r); }
-    if(getKey(GLFW_KEY_D)) { p[0] += SIN(r); p[1] -= COS(r); }
-    if(getKey(GLFW_KEY_A)) { p[0] -= SIN(r); p[1] += COS(r); }
+    float speed = 0.05;
+    if(getKey(GLFW_KEY_W)) { p[0] += COS(r)*speed; p[1] += SIN(r)*speed; }
+    if(getKey(GLFW_KEY_S)) { p[0] -= COS(r)*speed; p[1] -= SIN(r)*speed; }
+    if(getKey(GLFW_KEY_D)) { p[0] += SIN(r)*speed; p[1] -= COS(r)*speed; }
+    if(getKey(GLFW_KEY_A)) { p[0] -= SIN(r)*speed; p[1] += COS(r)*speed; }
     if(getKey(GLFW_KEY_RIGHT)) { r-=5; if(r < 0) r += 360; }
     if(getKey(GLFW_KEY_LEFT)) { r+=5; if(r > 359) r -= 360; }
 
-    // if(getKey(GLFW_KEY_TAB)) draw2D();
-    // else draw3D();
     draw2D();
     return 0;
 }
@@ -130,7 +102,7 @@ int main(int argc, char** argv)
     if(!window) return 1;
     glPointSize(2.0);
     
-    p[0] = p[1] = HH + 10;
+    p[0] = p[1] = GS>>1;
     for(int i = 0; i < 360; i++)
     {
         trig[0][i] = sin(i*M_PI/180);
