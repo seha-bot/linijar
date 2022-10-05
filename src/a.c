@@ -40,43 +40,67 @@ void box(int x, int y, int w, int h, char c)
 }
 
 float t_ray[2];
-float t_ray2[2];
 void ray(int a)
 {
     if(a < 0) a += 360;
     if(a > 359) a -= 360;
-    float end[2];
-    end[0] = COS(a) == 0 ? 1 : COS(a);
-    end[1] = SIN(a) == 0 ? 1 : SIN(a);
-    float dX = sqrt( 1 + (end[1]*end[1])/(end[0]*end[0]) );
-    float dY = sqrt( 1 + (end[0]*end[0])/(end[1]*end[1]) );
 
-    
-    t_ray[0] = clamp(p[0] + COS(a) * dY, -1000, 1000);
-    t_ray[1] = clamp(p[1] + SIN(a) * dY, -1000, 1000);
+    float rayDir[2];
+    rayDir[0] = COS(a);
+    rayDir[1] = SIN(a);
 
-    t_ray2[0] = clamp(p[0] + COS(a) * dX, -1000, 1000);
-    t_ray2[1] = clamp(p[1] + SIN(a) * dX, -1000, 1000);
+    float dX = sqrt( 1 + (rayDir[1]*rayDir[1]) / (rayDir[0]*rayDir[0]) );
+    float dY = sqrt( 1 + (rayDir[0]*rayDir[0]) / (rayDir[1]*rayDir[1]) );
 
-    // t_ray[0] -= (p[0] - (int)p[0]);
-    // t_ray[1] -= (p[1] - (int)p[1]);
-}
+    int mapX = p[0];
+    int mapY = p[1];
 
-void ray2(int a)
-{
-    if(a < 0) a += 360;
-    if(a > 359) a -= 360;
-    t_ray[0] = p[0];
-    t_ray[1] = p[1];
-    int x, y;
-    for(int i = 0; i < 1000; i++)
+    int vStep[2];
+
+    if(rayDir[0] < 0)
     {
-        t_ray[0] += COS(a) * 0.01;
-        t_ray[1] += SIN(a) * 0.01;
-        x = t_ray[0], y = t_ray[1];
-        if(x < 0 || y < 0 || x >= GS || y >= GS) break;
-        if(walls[GS-1-y][x]) break;
+        vStep[0] = -1;
+        t_ray[0] = (p[0] - mapX) * dX;
     }
+    else
+    {
+        vStep[0] = 1;
+        t_ray[0] = (mapX + 1.0f - p[0]) * dX;
+    }
+    if(rayDir[1] < 0)
+    {
+        vStep[1] = -1;
+        t_ray[1] = (p[1] - mapY) * dY;
+    }
+    else
+    {
+        vStep[1] = 1;
+        t_ray[1] = (mapY + 1.0f - p[1]) * dY;
+    }
+
+    float fDistance = 0.0f;
+    while(1)
+    {
+        if(t_ray[0] < t_ray[1])
+        {
+            mapX += vStep[0];
+            fDistance = t_ray[0];
+            t_ray[0] += dX;
+        }
+        else
+        {
+            mapY += vStep[1];
+            fDistance = t_ray[1];
+            t_ray[1] += dY;
+        }
+        if(mapX < 0 || mapY < 0 || mapX >= GS || mapY >= GS) break;
+        if(walls[GS-1-mapY][mapX]) break;
+    }
+
+    float vInteraction[2];
+    vInteraction[0] = p[0] + rayDir[0] * fDistance;
+    vInteraction[1] = p[1] + rayDir[1] * fDistance;
+    line(p[0]*CW, p[1]*CH, vInteraction[0]*CW, vInteraction[1]*CH, 3);
 }
 
 void draw2D()
@@ -91,14 +115,10 @@ void draw2D()
         }
     }
 
-    int fov = 1;
+    int fov = 60;
     for(int i = 0; i < fov; i++)
     {
-        ray2(r+i-(fov>>1));
-        // line(p[0]*CW, p[1]*CH, t_ray[0]*CW, t_ray[1]*CH, 9);
         ray(r+i-(fov>>1));
-        line(p[0]*CW, p[1]*CH, t_ray[0]*CW, t_ray[1]*CH, 3);
-        line(p[0]*CW+1, p[1]*CH+1, t_ray2[0]*CW+1, t_ray2[1]*CH+1, 4);
     }
     pixel(p[0]*CW, p[1]*CH, 4);
 }
