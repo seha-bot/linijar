@@ -30,6 +30,10 @@ int walls[GS][GS] = {
 
 void box(int x, int y, int w, int h, u_int32_t c)
 {
+    x = clamp(x, 0, WIDTH);
+    y = clamp(y, 0, HEIGHT);
+    w = clamp(w, 0, WIDTH);
+    h = clamp(h, 0, HEIGHT);
     for(int i = x; i < x+w; i++)
     {
         for(int j = y; j < y+h; j++)
